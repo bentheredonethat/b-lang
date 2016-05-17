@@ -1,30 +1,34 @@
 import re
 import Token
+
 class LexemeTokenMapper:
 	
 	# table of regex patterns that associate to token identifiers	
 	token_patterns = [
-		{
-			"token_name" : "T_INT",
-			"pattern" : "^\d*"
-		},
-		{
-			"token_name" : "T_DOUBLE",
-			 "pattern" : "^\d*\.\d*" 
-		},
+
 		{
 			"token_name" : "T_STRING",
 			 "pattern" : "^(\"|\')[0-9a-zA-Z]*(\"|\'')" 
 		}, 
 		{
 			"token_name" : "T_IDENTIFIER", 
-			"pattern" : "^[a-z][0-9a-zA-Z]*", 
+			"pattern" : "[a-z]+[0-9a-zA-Z]*", 
+		},
+		{
+			"token_name" : "T_INT",
+			"pattern" : "[0-9]+"
+		},
+		{
+			"token_name" : "T_DOUBLE",
+			 "pattern" : "\d+\.\d+" 
 		}
 	]
 
 	OPERATORS = {
 		"/", "=", '*', '%', '+', '-', '-=', '+=', '<', '>', '>=', '<='
 	}
+
+
 
 	KEYWORDS = { 
 	"if", "else", 
@@ -47,30 +51,44 @@ class LexemeTokenMapper:
 		# try lexeme against each entity in token pattern
 			current_pattern_hits = re.findall(current_pattern["pattern"], self.lexeme)
 		# save each instance of matches from table with its associated priority
-
+			if len(current_pattern_hits) > 0:
 		# priority can be inferred from index into table (higher is more important)
-			matches.append({"priority" : index, "pattern_hits" : current_pattern_hits})
-
+				matches.append({"priority" : index, "pattern_hits" : max(current_pattern_hits)})
+ 	
 		return matches
 
-	def filterByLexeme(self, matches):		
-			# save any match that exactly matches lexeme
-			matches =  filter(lambda i: i == self.lexeme , matches)
+	def filterMatches(self, matches):
+			# arrange arrays for both priority and hits
+			# make hit_array only contain max's for each hit array
+			# return longest match
+
+			if len(matches) == 0:
+				return matches
+
+			priority_arr = []
+			hit_arr = []
+			for i in matches:
+				priority_arr.append(i["priority"])
+				hit_arr.append(i["pattern_hits"])
+
+			max_hit_idx = 0
+			for i, elem in enumerate(hit_arr):
+				if len(elem) >= hit_arr[max_hit_idx]:
+					max_hit_idx = i
+
+			max_pri_idx = 0
+			for i, elem in enumerate(priority_arr):
+				if elem >= hit_arr[max_pri_idx]:
+					max_pri_idx = i
+
+			if max_pri_idx == max_hit_idx:
+				return matches[max_pri_idx]
+
+			# in case of difference, favor with priority
+			else:
+				return matches[max_pri_idx]
 
 
-	def filterMatchesByPriorty(self, matches):
-		# only keep highest priority match list
-		highest_priority = 0
-		for i in matches:
-			if i["priority"] > highest_priority:
-				highest_priority = i["priority"]
-
-		# in that list, return longest match
-		for i in matches:
-			if i["priority"] != highest_priority:
-				matches.remove(i)
-
-		return matches
 
 	# given lexeme, look for any matches
 	# if any matches are found that are same length match as lexeme:
@@ -80,21 +98,21 @@ class LexemeTokenMapper:
 
 		self.lexeme = lexeme
 
-		matches = self.getAllMatchesForLexeme()
-		matches = self.filterMatchesByPriorty(matches)
-		matches = self.filterByLexeme(matches)
-
-
 		if lexeme in self.KEYWORDS:
 			return {"token_name" : "T_KEYWORD", "lexeme": self.lexeme }
 
 		if lexeme in self.OPERATORS:
 			return { "token_name" : "T_OPERATOR", "lexeme": self.lexeme } 
 
-		if not (matches is not None and len(matches) == 0) :
-			# no match so return error token
+		match = self.getAllMatchesForLexeme()
+		match = self.filterMatches(match)
+
+		if len(match) == 0 :
+			#no match so return error token
 			return { "token_name" : "T_ERROR", "lexeme": self.lexeme }
 		
 
-		else:
-			return matches
+		return { 
+			"token_name" : self.token_patterns[match["priority"]]["token_name"], 
+			"lexeme" : self.lexeme 
+			}

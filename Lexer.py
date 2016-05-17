@@ -30,19 +30,21 @@ class Lexer:
 		current_lexeme = ''
 
 		# loop through file
-		for line in lines_of_file:
+		for l in lines_of_file:
 			# update line and column count
 			self.current_line += 1
+			line = l.replace("\n","")
 			for current_char in line:
 				self.current_column += 1
-			# if current char is not space:
-				if current_char != ' ':
+			# if current char is neither space nor newline:
+				if not current_char.isspace():
 			#	update current_lexeme
 					current_lexeme += current_char
-			# else current char is space:
+			# else current char is space or newline:
 				else:
-			#	so add current lexeme to lexeme array
-					lexemes.append(current_lexeme)
+			#	so add current lexeme to lexeme array if not empty
+					if len(current_lexeme) > 0:
+						lexemes.append(current_lexeme)
 			#	reset current lexeme
 					current_lexeme = ''
 
