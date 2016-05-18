@@ -12,20 +12,18 @@ class Lexer:
 		self.filename = input_file
 
 	def convertLexemeToToken(self, lexeme):
-		# get matches
-		# matches have syntax: 	("token_name": "...", "lexeme": lexeme) 
-		match = self.token_finder.findMatchingToken(lexeme)
+		match = self.token_finder.findMatchingToken(lexeme[0])
 		# convert to token to return
-		return Token(self.current_line, self.current_column, match["token_name"], lexeme)
+		# lexeme is array of lexeme, corresponding line and column
+		return Token(lexeme[1], lexeme[2] - len(lexeme), match["token_name"], lexeme[0])
 
 
 	def run(self):
 		
 		lexemes = []
-
+		tokens = []
 		 #Open a file
 		lines_of_file = open(self.filename, "r").readlines()
-
 		# make current char
 		current_lexeme = ''
 
@@ -33,7 +31,7 @@ class Lexer:
 		for l in lines_of_file:
 			# update line and column count
 			self.current_line += 1
-			line = l.replace("\n","")
+			line = l.replace("\n"," ")
 			for current_char in line:
 				self.current_column += 1
 			# if current char is neither space nor newline:
@@ -44,14 +42,16 @@ class Lexer:
 				else:
 			#	so add current lexeme to lexeme array if not empty
 					if len(current_lexeme) > 0:
-						lexemes.append(current_lexeme)
+						lexemes.append([current_lexeme, self.current_line, self.current_column])
 			#	reset current lexeme
 					current_lexeme = ''
+			self.current_column = 0
+		# just in case there are lexemes that end at EOF
+		if len(current_lexeme) > 0:
+			lexemes.append([current_lexeme, self.current_column, self.current_line])
 
 		# map each lexeme to its corresponding token
 		tokens = map( self.convertLexemeToToken, lexemes)
-
-
 		for i in tokens:
 			i.printToken()
 		return tokens

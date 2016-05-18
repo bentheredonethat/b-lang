@@ -7,4 +7,4 @@ class Token:
 		self.lexeme = lexeme
 
 	def printToken(self):
-		print( self.token_type + "\t\t " + self.lexeme  )
+		print( self.token_type +  ", lexeme: " + self.lexeme, ", line: " , self.line, ",     column: ", self.column)
