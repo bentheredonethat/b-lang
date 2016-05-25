@@ -7,69 +7,45 @@ class LexemeTokenMapper:
 	token_patterns = [
 
 		{
-			"token_name" : "T_STRING",
+			"token_name" : "STRING",
 			 "pattern" : "(\".+?\")|(\'.+?\')"
 		}, 
 		{
-			"token_name" : "T_IDENTIFIER", 
+			"token_name" : "VAR", 
 			"pattern" : "[a-z]+[0-9a-zA-Z]*", 
 		},
 		{
-			"token_name" : "T_INT",
+			"token_name" : "INT",
 			"pattern" : "[0-9]+"
-		},
-		{
-			"token_name" : "T_DOUBLE",
-			 "pattern" : "[0-9]+\.[0-9]+" 
-		},
-		{
-			"token_name" : "}",
-			 "pattern" : "(\})" 
-		},{
-			"token_name" : "{",
-			 "pattern" : "(\{)" 
-		},{
+		}
+		,{
 			"token_name" : "(",
 			 "pattern" : "(\()" 
 		},{
-			"token_name" : ",",
-			 "pattern" : "(\,)" 
-		},{
-			"token_name" : ".",
-			 "pattern" : "(\.)" 
-		},{
-			"token_name" : "{",
-			 "pattern" : "(\{)" 
-		},{
-			"token_name" : "[",
-			 "pattern" : "(\[)" 
-		},{
-			"token_name" : "]",
-			 "pattern" : "(\])" 
-		},{
 			"token_name" : ")",
 			 "pattern" : "(\))" 
+		},{
+			"token_name" : "ASSIGNMENT_OP",
+			 "pattern" : "(=)" 
 		}
 	]
 
 	OPERATORS = {
-		"/", "=", '*', '%', '+', '-', '-=', 
-		'+=', '<', '>', '>=', '<=', '==', '!=', 
-		'&&', '||', '!'
+		'+'
 	}
 
-
+	TYPES = {
+		"double", "int", "string"
+	}
 
 	KEYWORDS = { 
-	"if", "else", 
-	"double", "int", 
-	"while", "for",
-	"string",
-	"null",
-	"break", "return", 
-	"null", "new",
-	"class", "interface", "extends", "implements", "extends"
+		"if", "else", 
+		"while", "for",
+		"null",
+		"break", "return", 
+		"null", "new"
 	}
+
 	def __init(self):
 		self.lexeme = ""
 
@@ -89,7 +65,6 @@ class LexemeTokenMapper:
 	def filterMatches(self, matches):
 			# filter matches based on longest match
 
-
 			if len(matches) == 0:
 				return matches
 
@@ -104,8 +79,6 @@ class LexemeTokenMapper:
 
 
 
-
-
 	# given lexeme, look for any matches
 	# if any matches are found that are same length match as lexeme:
 	#	then return best match
@@ -115,10 +88,13 @@ class LexemeTokenMapper:
 		self.lexeme = lexeme
 
 		if lexeme in self.KEYWORDS:
-			return {"token_name" : "T_KEYWORD", "lexeme": self.lexeme }
+			return {"token_name" : "KEYWORD", "lexeme": self.lexeme }
+
+		if lexeme in self.TYPES:
+			return {"token_name" : "TYPE", "lexeme": self.lexeme }
 
 		if lexeme in self.OPERATORS:
-			return { "token_name" : "T_OPERATOR", "lexeme": self.lexeme } 
+			return { "token_name" : "OPERATOR", "lexeme": self.lexeme } 
 
 		match = self.getAllMatchesForLexeme()
 		match = self.filterMatches(match)
