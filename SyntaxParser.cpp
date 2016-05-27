@@ -2,6 +2,9 @@
 #include <typeinfo>
 #include <unordered_map>
 #include <string>
+#include <stdlib.h>
+#include <stdio.h> 
+#include <stack>
 #include <algorithm>    // std::find
 using namespace std;
 
@@ -17,64 +20,38 @@ public:
 
 private:
 	std::vector<Token*> tokens;
-	int tokenIndex = 0;
-	Token *currentToken;
+	int tokenIndex;
 
-	void error(const char msg[]){
-		cout << msg << endl;
-	}
-
-	int accept(string token_type) {
-	    if (token_type == currentToken->token_type) {
-	        getNextToken();
-	        return 1;
-	    }
-	    return 0;
-	}
-
-	int expect(string token_type) {
-	    if (accept(token_type))
-	        return 1;
-	    error("expect: unexpected symbol");
-	    return 0;
+	Token * currentToken(){
+		return tokens[tokenIndex];
 	}
 
 	// return 1 if successfully got next token
 	// otherwise 0 for failure
 	int getNextToken(){
+		if (tokenIndex < tokens.size() - 1){
+			tokenIndex += 1;
+			cout << "token index " << tokenIndex << "\t\t" << currentToken()->lexeme << endl;
+			return 1;
+		}
+		
+		cout << "no more tokens\n";
+		return 0;
+	}
+
+	Token * peek(){
 		if (tokenIndex < (tokens.size() - 1)){
-			tokenIndex++;
-			currentToken = tokens[tokenIndex];
-			cout << currentToken->lexeme << endl;
-
-			return 1;
+			return tokens[tokenIndex+1];
+			
 		}
-		return 0;
+		cout << "peeked out of bounds of tokens\n";
+		return NULL;
+		exit(EXIT_FAILURE);
 	}
 
-	// return 1 if successfully got next token
-	// otherwise 0 for failure
-	int getPrevToken(){
-		if (tokenIndex > 0){
-			tokenIndex--;
-			currentToken = tokens[tokenIndex];
-			return 1;
-		}
-		return 0;
-	}
-
-	struct ParseTree{
-	};
-
-	int type(int & success){ // ptr to entry in type table
+	int type(){ // ptr to entry in type table
 		// check if type is in type vector
-
-		if (currentToken->token_type != "TYPE"){
-			success = 0;
-			return 0;
-		}
-		success = 1;
-		return 1;
+		return currentToken()->token_type == "TYPE";
 
 		// vector<string>::iterator it;
 		// it = find (typeTable.begin(), typeTable.end(), currentToken->lexeme);
@@ -83,198 +60,161 @@ private:
 		// if (it == typeTable.end()) {
 		// 	typeTable.push_back(currentToken->lexeme);
 		// }
+	}
+	int variable(){  
+		//ptr to entry in symbol table
+		return currentToken()->token_type == "VAR";
+	}
+	int constant(){ 
+		// description from variable or string
+		return (currentToken()->token_type == "INT");
+	}
+
+
+	int expression( ){
+		//cout << "gf\n";
+		int i = tokenIndex;
+
+		bool parenExpression = 1;
+
+		// BUG how to handle end of paren expression ')'
+		//cout << currentToken()->lexeme << endl;		
+
+		if (currentToken()->token_type == "("){
+			printf("parsing parenExpression\n");
+			getNextToken(); // eat (
+			parenExpression &= expression() ;
+			parenExpression &= (peek()->token_type == ")"); 
+			getNextToken(); // go to )
+			return parenExpression;
+		}
 		
-	}
-	int variable(int & success){  // ptr to entry in symbol table
+		// handle possible binary expression E + E
+		if (variable() || constant() || parenExpression){
+			if (peek()->token_type == "OPERATOR"){ // if binary expression then check
+				getNextToken(); // go to op
+				getNextToken(); // eat op
+				return expression();
 
-		if (currentToken->token_type != "VAR"){
-			success = 0;
-			return 0;
-		}
-		success = 1;
-		return 1;	
-	}
-	int identifier(int& success){ // description from variable or type
-		if (currentToken->token_type != "INT" && currentToken->token_type != "VAR"){
-			success = 0;
-			return 0;
-		}
-
-		success = 1;
-		return 1;	
-	}
-
-	int expression( int &success){
-		// (E)
-		// ^  <--- currently at '('
-		// try expression inside
-		// then if both expression inside is valid and after is ')' report success
-		if (currentToken->lexeme == "("){
-			getNextToken();
-			int p = expression(success);
-			if (!success)
-				printf("syntax error: expression inside () is invalid\n" );
-			else{
-				if (currentToken->lexeme == ")"){
-					getNextToken(); // skip over ) to next token
-					return p; // stripped of ()
-				}
 			}
+			cout << "valid expression\n";
+			return 1;
 		}
-
-		// variable
-		if (currentToken->token_type == "VAR"){
-			int p;
-			variable(success);
-			if (!success){
-				printf("syntax error: variable inside expression is invalid\n" );
-			}
-			else getNextToken();
-			// either way give back tree p
-			return p;
-		}
-
-		// constant
-		if (currentToken->token_type == "INT"){
-			int p;
-			identifier(success);
-			if (!success){
-				printf("syntax error: type inside expression is invalid\n" );
-			}
-			else getNextToken();
-			// either way give back tree p
-			return p;
-
-		}
-
-		// a + b
-		int a = expression(success);
-		if (success){
-			int g = getNextToken();
-			if (g && currentToken->token_type == "OPERATOR"){
-				int b = expression(success);
-				getNextToken();
-				return (a && b) ? 1 : 0; 
-			}
-		}		
-	}
-
-	int declaration(int &success){
-		// <declaration> ::= <type> <variable>
-
-
-		type(success);
-		if (!success) printf("syntax error: type at declaration invalid\n" );
-		
-		getNextToken();
-
-		variable(success);
-		if (!success) printf("syntax error: variable at declaration invalid\n" );
-		
-		success = 2;
-		return 1; // 0 for error
-	}
-
-	int assignment(int &success){
-		// <assignment> ::= <variable> = <expression>
-		
-		// check if current token is variable
-		variable(success);
-		if (!success){
-			printf("syntax error: variable at assignment invalid\n" );
-		}
-		getNextToken();
-
-		// nex token should be =
-		char const *EQUALSIGN = "=";
-		if ( currentToken->lexeme == EQUALSIGN){
-			getNextToken();
-		}
-
-		int p;
-		// some sequence of tokens should evaluate to a proper expression
-		p = expression(success);
-
-		// success should be modified in expression fn call
-		return p;
-	}
-
-	int* statement(int& success){
-		// <statement> ::= <declaration><endofline>| <assignment><endoflline>
-		
-		int * p;
-		/* try for various statements:
-			0 failure
-			1 assignment success
-			2 declaration success
-
-		*/
-		*p = assignment(success);
-		if (success == 1){
-			getNextToken(); // walk to newline token
-			return p;
-		}
-
-		declaration( success);
-	 	if (success == 2){
-	 		getNextToken(); // walk to newline token
-	 		success = 1;
-	 		cout << "declaration valid, leaving statement()" << endl;
-	 		*p = 1;
-	 		return p;
-	 	}  
-		
-		
-		
-
-		printf("error with syntax in statement\n");
+		//cout << "error in expression\n";
+		tokenIndex = i; // wind it back
+		cout << "after winding back in expression, current token is " << currentToken()->lexeme << endl;
 		return 0;
 	}
 
-	int* program(int &success){
+	bool declaration(){
+		// <declaration> ::= <type> <variable>
+		int i = tokenIndex;
+
+		int a = type();
+		getNextToken(); // eat type
+		int b = variable();
+		int success = a & b;
+		if (!success){ // wind it back
+			//cout << "error in declaration\n";
+			// should be back at beginning
+			tokenIndex = i; // wind back
+			cout << "after winding back in declaration, current token is " << currentToken()->lexeme << endl;
+			return false;
+		}
+		cout << "valid declaration\n";
+		return true;
+	}
+
+
+	bool assignment(){
+		// <assignment> ::= <variable> = <expression>
+		int i = tokenIndex; // Save current index
+		
+		// if <variable><=><E>
+		int isVar = variable();
+		getNextToken(); // eat variable
+		int isAssigned =  currentToken()->lexeme == "=" ;
+		getNextToken(); // eat =
+		int isExpression =  expression();
+		if (isVar && isAssigned && isExpression){
+			cout << "valid assignment\n";
+			return true;
+		}
+		
+		tokenIndex = i; // wind back
+		cout << "after winding back in assignment, current token is " << currentToken()->lexeme << endl;
+		return false;
+		
+	}
+
+// disable optimizations in here for debugging
+// to undo, remove pragmas
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+	// should evaluate statement and put point current token to eol at end of statement
+	int statement(){
+
+
+
+
+		// <statement> ::= <declaration><endofline>| <assignment><endoflline> | <expression><endofline>
+		if (assignment() || declaration() || expression() ){
+		// 	Check for EOL
+			if ( peek()->token_type == "ENDOFLINE"){
+				cout << "got endofline after valid statement that ends with  " << currentToken()->lexeme << endl;
+				getNextToken(); // get to EOL
+				return 1;
+			}		
+		}
+
+		// Read to next EOL
+		while (peek()->token_type != "ENDOFLINE") getNextToken();
+		cout << "invalid statement\n";
+		return 0; // Return false
+	}
+#pragma GCC pop_options
+
+	std::vector<int> program(){
 		// <program> :: <statement><program>
-		int* programParseTree = new (int);
-		if (programParseTree == NULL){
-    		printf("Error: memory could not be allocated\n");
-    		*programParseTree = 0;
-    		return NULL;
-    	}
-		// 2 cases
-		// if at end, return ptr to 0
-		// else save statement in current int
-		// and next int should point next token
-		// at end of program!
+		std::vector<int> v;
+
 		if (tokenIndex == tokens.size() - 1)
-			return NULL;
+			return v;
+
+		int* t = new (int);
+		if (t == NULL){
+    		printf("Error: memory could not be allocated\n");
+    		v.push_back(0);
+    		return v;
+    	}
 
 		else{
-			programParseTree = statement(success);
-			if (!success){
-				cout << "invalid statement" << endl;
-				return NULL;
-			}
+			int p = statement();
+			cout << "this past statement was " << (p? "valid" : "not valid") << endl;
 
-			getNextToken();
-			programParseTree++;
-			programParseTree = program(success);
+			v.push_back ( p );
+
+
+			Token * notDone = peek(); // see if there is a next statement
+			if (notDone){ 
+				getNextToken(); // eat EOL from end of last statement
+				cout << "about to try new statement that starts with " << currentToken()->lexeme << endl;
+				
+				std::vector<int> restOfProgram = program();
+				v.insert(v.end(), restOfProgram.begin(), restOfProgram.end()); 
+			}
+			else cout << "done syntax parsing\n";
+			return v;
 		}  
 	}
 
 public:
 	SyntaxParser( std::vector<Token*> v){
 		tokens = v;
-		currentToken = v[0];
+		tokenIndex = 0;
 
-		for (int i = 0; i < tokens.size(); i++){
-			cout << tokens[i]->lexeme << ", ";
-		}
-		cout << endl;
-		for (int i = 0; i < tokens.size(); i++){
-			cout << tokens[i]->token_type << ", ";
-		}
-		cout << endl;
 	}
-	int* getAST(int & success){
-		return program(success);
+	std::vector<int> getAST(){
+		return program();
 	}
 };

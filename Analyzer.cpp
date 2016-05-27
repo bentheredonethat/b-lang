@@ -44,7 +44,6 @@ int main(int argc, char* argv[])
     char const* const fileName = "lo"; /* should check that argc > 1 */
     tokens = getTokens(fileName);
     SyntaxParser syntaxParser = SyntaxParser(tokens);
-    int success;
-    syntaxParser.getAST(success);
+    syntaxParser.getAST();
     return 0;
 }
