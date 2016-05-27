@@ -1,5 +1,4 @@
 #include <memory>
-namespace {
 
 
 /// ExprAST - Base class for all expression nodes.
@@ -32,8 +31,8 @@ class ParenExprAST : public ExprAST {
   //std::unique_ptr<ExprAST> e;
 
 	public:
-	  std::unique_ptr<ExprAST> E;
-	  ParenExprAST(std::unique_ptr<ExprAST> e) : E(std::move(e)) {}
+	  ExprAST* E;
+	  ParenExprAST(ExprAST* e) : E(std::move(e)) {}
 	  
 	  //std::unique_ptr<ExprAST> getExpression() const { return e; }
 };
@@ -53,14 +52,15 @@ class BinaryExprAST : public ExprAST {
 		//  std::unique_ptr<ExprAST> LHS, RHS;
 
 		public:
-			std::unique_ptr<ExprAST> LHS, RHS;
-	  BinaryExprAST(char op, std::unique_ptr<ExprAST> LHS,
-	                std::unique_ptr<ExprAST> RHS)
-	    : Op(op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
-	     
-	    char getOp()  { return Op; }
-	    // std::unique_ptr<ExprAST> getLHS() const { return LHS; }
-	    // std::unique_ptr<ExprAST> getRHS() const { return RHS; }
+			ExprAST * LHS;
+			ExprAST* RHS;
+	  BinaryExprAST(char op, ExprAST* lHS, ExprAST* rHS){
+	  	Op = op;
+	  	LHS = lHS;
+	  	RHS = rHS;
+	  }
+	  char getOp()  { return Op; }
+	  
 };
 
 /// StatementAST - Base class for all statement nodes.
@@ -73,9 +73,9 @@ public:
 class AssignmentStaAST : public StatementAST {
 
 	public:
-		std::unique_ptr<VariableExprAST> Var; // variable that is affected by assignment
-		std::unique_ptr<ExprAST> RHS; // right hand side of assignment statement
-	  	AssignmentStaAST(std::unique_ptr<VariableExprAST> var,std::unique_ptr<ExprAST> rHS)
+		VariableExprAST * Var; // variable that is affected by assignment
+		ExprAST * RHS; // right hand side of assignment statement
+	  	AssignmentStaAST(VariableExprAST * var,ExprAST * rHS)
 	  	 : Var(std::move(var)), RHS(std::move(rHS)) {}
 };
 
@@ -91,4 +91,3 @@ class DeclarationStaAST : public StatementAST {
 	  	}
 };
 
-}
