@@ -14,7 +14,7 @@ Sample on how to "make" a programming language.
 -     Yes, will report error and parse correctly for the following:
       * expressions consisting of binary operator '+', nested parenthesis, variables, constants
       * statements that are either assignment or declaration
-- [ ] Generate Abstract Syntax Tree
+- [x] Generate Abstract Syntax Tree
 - [ ] Semantic Analysis
 - [ ] Code Generation
 - [ ] Optimize all the things!
