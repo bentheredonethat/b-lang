@@ -8,12 +8,12 @@ Sample on how to "make" a programming language.
 - [x] Lexical Analysis
       * Yes, used Python to read from "input.blang" file
       * writes tokens into file called lo to be read from later
-      * TO DO
+       TO DO
       - [ ] report column and line for each token
 - [x] Syntax Analysis
--   * Yes, will report error and parse correctly for the following:
--     * expressions consisting of binary operator '+', nested parenthesis, variables, constants
--     * statements that are either assignment or declaration
+-     Yes, will report error and parse correctly for the following:
+      * expressions consisting of binary operator '+', nested parenthesis, variables, constants
+      * statements that are either assignment or declaration
 - [ ] Generate Abstract Syntax Tree
 - [ ] Semantic Analysis
 - [ ] Code Generation
