@@ -15,6 +15,7 @@ Sample on how to "make" a programming language.
       * expressions consisting of binary operator '+', nested parenthesis, variables, constants
       * statements that are either assignment or declaration
 - [x] Generate Abstract Syntax Tree
+-- bug fix: need to downcast appropriate pointers in Syntax Parser expression and statement functions
 - [ ] Semantic Analysis
 - [ ] Code Generation
 - [ ] Optimize all the things!
