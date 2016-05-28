@@ -24,5 +24,5 @@ Sample on how to "make" a programming language.
 __Compiler still in development, but if you still want to run it...__
 * run "python Lexer.py" to tokenize your input.blang file
 * Lexer.py produces file called "lo" that holds tokens with corresponding lexemes
-* compile Analyzer(s) with "g++ Analyzer.cpp -o Analyzer -std=c++11"
+* compile Analyzer(s) with "g++ Analyzer.cpp -o -std=c++11 -std=c++0x"
 * run Analyzer executable in same directory that Lexer.py was run to analyze syntax.

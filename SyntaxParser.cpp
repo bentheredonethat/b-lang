@@ -1,23 +1,22 @@
 
 #include <typeinfo>
-#include <unordered_map>
-#include <string>
 #include <stdlib.h>
 #include <stdio.h> 
 #include <stack>
 #include <algorithm>    // std::find
 #include "AST.cpp"
+#include <iostream>
+#include <vector>
+#include <string>
+#include <stdlib.h>     /* atof */
+
+
 using namespace std;
 
 class SyntaxParser{ 
 
 public:
-	// hold types for program
-	vector<string> typeTable;
-
-	// hold variable names, map to locations in types table
-	unordered_map<Token*,vector<string>::iterator> symbolTable;
-
+	
 	// hold sequence of statements that comprise program
 	vector<StatementAST> programAST;
 
@@ -87,7 +86,7 @@ private:
 	NumberExprAST * literal(){ 
 		// description from variable or string
 		if (currentToken()->token_type == "INT"){
-			NumberExprAST * a = new NumberExprAST(stod(currentToken()->lexeme));
+			NumberExprAST * a = new NumberExprAST(atof(currentToken()->lexeme.c_str()));
 			return a;
 		}
 		return NULL;
@@ -95,7 +94,7 @@ private:
 
 	// return whether current token and a subsequent array evaluates to an expression
 	// if so return true. if not, then wind back to where the function started in token array
-	ExprAST* expression( ){
+	ExpressionHolder* expression( ){
 		//cout << "gf\n";
 		int i = tokenIndex;
 
@@ -103,15 +102,20 @@ private:
 
 		// BUG how to handle end of paren expression ')'
 		//cout << currentToken()->lexeme << endl;		
-		ExprAST * p;
+		ExprAST * p; // paren expression
 		if (currentToken()->token_type == "("){
 			printf("parsing parenExpression\n");
 			getNextToken(); // eat (
-			p = new ParenExprAST ( expression() ) ;
+			p = new ParenExprAST ( expression()->expressionPtr ) ;
 			parenExpression &= (p ? 1 : 0) ; // if p is not null (i.e. valid). then say it was success
 			parenExpression &= (peek()->token_type == ")"); 
 			getNextToken(); // go to )
-			return p;
+			//return p;
+			ExpressionHolder * s = new ExpressionHolder;
+			s->expressionPtr = p;
+			s->whichType = 4; // p holds upcast of paren expression and 4 denotes which downcast to do later
+			//*s = { p,  4}; 
+			return s;
 		}
 		
 		ExprAST * v = variable();
@@ -124,14 +128,23 @@ private:
 				getNextToken(); // eat op
 
 				// try LHS expression
-				ExprAST * RHS = expression();
+				ExprAST * LHS = expression()->expressionPtr;
 
 				// figure out which is RHS
-				ExprAST * LHS = (v ? v : constant);
-				LHS = (p ? p : constant);
+				ExprAST * RHS = (v ? v : constant);
+				int downcastNum = v ? 2 : 1; // 2 downcasts to variable expression, 1 for number
+				RHS = (p ? p : constant); 
+				downcastNum = p ? 4 : downcastNum;
+
 
 				// if both left and right side of binary expr are valid, then return it
-				if (LHS && RHS) return new BinaryExprAST('+', LHS, RHS );
+				if (LHS && RHS) {
+					ExprAST * binExpression = new BinaryExprAST('+', LHS, RHS );
+					ExpressionHolder * s = new ExpressionHolder;
+					s->expressionPtr = binExpression;
+					s->whichType = 5; // 5 maps to binary expression downcast
+					return s;
+				}
 				// otherwise dont
 				return NULL;
 
@@ -140,8 +153,13 @@ private:
 
 			// valid expression, but not binary, so figure out which type of expression
 			ExprAST * ret = (v ? v : constant);
+			int downcastNum = v ? 2 : 1;
 			ret = (p ? p : constant);
-			
+			downcastNum = p ? 4 : downcastNum;
+			ExpressionHolder * s = new ExpressionHolder;
+			s->expressionPtr = ret;
+			s->whichType = downcastNum;
+			return s;
 		}
 		//cout << "error in expression\n";
 		tokenIndex = i; // wind it back
@@ -186,7 +204,7 @@ private:
 		getNextToken(); // eat variable
 		int isAssigned =  currentToken()->lexeme == "=" ;
 		getNextToken(); // eat =
-		ExprAST * expr = expression();
+		ExprAST * expr = expression()->expressionPtr;
 		int isExpression =  expr ? 1 : 0;
 		if (isVar && isAssigned && isExpression){
 			cout << "valid assignment\n";
@@ -204,18 +222,22 @@ private:
 #pragma GCC push_options
 #pragma GCC optimize ("O0")
 	// should evaluate statement and point current token to eol after end of statement
-	StatementAST * statement(){
+	StatementHolder * statement(){
 
 		// <statement> ::= <declaration><endofline>| <assignment><endoflline> 
-		StatementAST * a = declaration();
-		StatementAST * b = assignment();
+		StatementAST * declStatement = declaration();
+		StatementAST * assignmentStatement = assignment();
 
-		if ( a || b ){
+		if ( declStatement || assignmentStatement ){
 		// 	Check for EOL
 			if ( peek()->token_type == "ENDOFLINE"){
 				cout << "got endofline after valid statement that ends with  " << currentToken()->lexeme << endl;
 				getNextToken(); // get to EOL
-				return a ? a : b; // figure out which type of statement to return
+				StatementHolder * s;
+				// s hold statement information and denote which downcast to do
+				s->statementPtr = assignmentStatement ? assignmentStatement : declStatement;
+				s->whichType = declStatement ? 0 : 1;  
+				return s;
 			}		
 		}
 		// if not valid statement, report error and parse next statement
@@ -230,11 +252,11 @@ private:
 
 	// using tail recursion, this function recurses toward end of tokens and uses
 	// recursive descent to parse tokens into collection of AST's representing statements
-	std::vector<StatementAST*> program(){
+	std::vector<StatementHolder*> program(){
 		// <program> :: <statement><program>
 		
 		// hold current (and rest of) statement evaluations
-		std::vector<StatementAST*> v;
+		std::vector<StatementHolder*> v;
 
 		// if already last token, return 
 		if (tokenIndex == tokens.size() - 1)
@@ -242,7 +264,7 @@ private:
 
 
 		else{
-			StatementAST* p = statement(); // evaluate for current location in tokens
+			StatementHolder* p = statement(); // evaluate for current location in tokens
 			// report error or success
 			cout << "this past statement was " << (p ? "valid" : "not valid") << endl;
 
@@ -257,7 +279,7 @@ private:
 				cout << "about to try new statement that starts with " << currentToken()->lexeme << endl;
 			
 				// before recursing, add rest of program to report	
-				std::vector<StatementAST*> restOfProgram = program();
+				std::vector<StatementHolder*> restOfProgram = program();
 				v.insert(v.end(), restOfProgram.begin(), restOfProgram.end()); 
 			}
 			else cout << "done syntax parsing\n";
@@ -272,7 +294,7 @@ public:
 		tokenIndex = 0; // current token should start at beginnig
 
 	}
-	std::vector<StatementAST*> getAST(){
+	std::vector<StatementHolder*> getAST(){
 		return program(); // currently AST is not yet implemented, just reports whether syntax is correct
 	}
 };

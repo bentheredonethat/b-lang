@@ -44,6 +44,6 @@ int main(int argc, char* argv[])
     char const* const fileName = "lo";
     tokens = getTokens(fileName); // read in tokens from lexed file 
     SyntaxParser syntaxParser = SyntaxParser(tokens); // init parser with tokens
-    syntaxParser.getAST(); // generate syntax tree
+    std::vector<StatementHolder*> AST = syntaxParser.getAST(); // generate syntax tree
     return 0;
 }

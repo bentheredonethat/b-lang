@@ -1,11 +1,32 @@
 #include <memory>
-
-
+#include <string>
+#include <unordered_map>
+using namespace std;
 /// ExprAST - Base class for all expression nodes.
 class ExprAST {
 public:
   virtual ~ExprAST() {}
 };
+
+// map from number to which pointer to downcast an expression to
+std::unordered_map<int, std::string> ExpressionDowncastMap = {
+	{0, "ExprAST"},
+	{1, "NumberExprAST"},
+	{2, "VariableExprAST"},
+	{3, "StatementAST"},
+	{4, "ParenExprAST"},
+	{5, "BinaryExprAST"}
+};
+
+// ExpressionHolder - hold ExprAST object and number that represents which type of child
+// class to downcast to
+struct ExpressionHolder{
+	ExprAST * expressionPtr;
+	int whichType;
+
+};
+
+
 
 /// NumberExprAST - Expression class for numeric literals like "1.0".
 class NumberExprAST : public ExprAST {
@@ -32,7 +53,7 @@ class ParenExprAST : public ExprAST {
 
 	public:
 	  ExprAST* E;
-	  ParenExprAST(ExprAST* e) : E(std::move(e)) {}
+	  ParenExprAST(ExprAST* e){ E = e; }
 	  
 	  //std::unique_ptr<ExprAST> getExpression() const { return e; }
 };
@@ -69,6 +90,21 @@ public:
 	virtual ~StatementAST() {}
 };
 
+
+// map from number to which pointer to downcast an expression to
+std::unordered_map<int, std::string> StatementDowncastMap = {
+	{0, "DeclarationStaAST"},
+	{1, "AssignmentStaAST"}
+};
+
+// StatementHolder - hold StatementAST object and number that represents which type of child
+// class to downcast to
+struct StatementHolder{
+	StatementAST * statementPtr;
+	int whichType;
+
+};
+
 /// AssignmentStaAST - Satement class for assignment statements
 class AssignmentStaAST : public StatementAST {
 
@@ -76,7 +112,10 @@ class AssignmentStaAST : public StatementAST {
 		VariableExprAST * Var; // variable that is affected by assignment
 		ExprAST * RHS; // right hand side of assignment statement
 	  	AssignmentStaAST(VariableExprAST * var,ExprAST * rHS)
-	  	 : Var(std::move(var)), RHS(std::move(rHS)) {}
+	  	 {
+	  	 	Var = var;
+	  	 	RHS = rHS;
+	  	 }
 };
 
 /// DeclarationStaAST - Satement class for declaration statements
